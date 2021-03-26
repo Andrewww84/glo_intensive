@@ -23,23 +23,37 @@ const showClothing = document.querySelectorAll('.show-clothing');
 const showAccessories = document.querySelectorAll('.show-accessories');
 const cartTableGoods = document.querySelector('.cart-table__goods');
 const cartTableTotal = document.querySelector('.card-table__total');
+const cartCount = document.querySelector('.cart-count');
+const btnDanger = document.querySelector('.btn-danger');
 
 // server request & response
- 
-const getGoods = async () => {
-  const result = await fetch('db/db.json');
-  console.log(result);
-  if (!result.ok) {
-    throw 'Ошибочка вышла; ' + result.status;
-  }
-  return result.json();
-};
+
+const checkGoods = () => {
+
+  const data = [];
+
+  return async () => {
+    if (data.length) return data;
+    const result = await fetch('db/db.json');
+    if (!result.ok) {
+      throw 'Ошибочка вышла; ' + result.status
+    }
+     data.push(...(await result.json()));
+     return data
+  };
+}
+
+const getGoods = checkGoods();
 
 const cart = {
-  cartGoods: [
-    
-  ],
-  renderCart(){
+  cartGoods: [],
+  countQuantity() {
+    cartCount.textContent = this.cartGoods.reduce((sum, item) => {
+      return sum + item.count;
+    }, 0)
+  },
+
+  renderCart() {
     cartTableGoods.textContent = '';
     this.cartGoods.forEach(({ id, name, price, count }) => {
       const trGood = document.createElement('tr');
@@ -60,15 +74,20 @@ const cart = {
     const totalPrice = this.cartGoods.reduce((sum, item) => {
       return sum + (item.price * item.count);
     }, 0);
-    
+
     cartTableTotal.textContent = totalPrice + '$';
 
   },
-  deleteGood(id){
+  deleteGood(id) {
     this.cartGoods = this.cartGoods.filter(item => id !== item.id);
     this.renderCart();
+    this.countQuantity();
   },
-  minusGood(id){
+  clearCart() {
+    this.cartGoods.length = 0;
+    this.countQuantity();
+  },
+  minusGood(id) {
     for (const item of this.cartGoods) {
       if (item.id === id) {
         if (item.count <= 1) {
@@ -80,18 +99,20 @@ const cart = {
       }
     }
     this.renderCart();
+    this.countQuantity();
   },
-  
-  plusGood(id){
+
+  plusGood(id) {
     for (const item of this.cartGoods) {
       if (item.id === id) {
-          item.count++;
-          break;
+        item.count++;
+        break;
       }
     }
     this.renderCart();
+    this.countQuantity();
   },
-  addCartGoods(id){
+  addCartGoods(id) {
     const goodItem = this.cartGoods.find(item => item.id === id);
     if (goodItem) {
       this.plusGood(id);
@@ -105,17 +126,21 @@ const cart = {
             price,
             count: 1
           });
+          this.countQuantity();
         });
     }
   },
 }
 
+// bind ???
+
+btnDanger.addEventListener('click', cart.clearCart.bind(cart));
 
 document.body.addEventListener('click', event => {
   const addToCart = event.target.closest('.add-to-cart');
   console.log(addToCart);
 
-  if (addToCart){
+  if (addToCart) {
     cart.addCartGoods(addToCart.dataset.id)
   }
 });
@@ -142,7 +167,7 @@ cartTableGoods.addEventListener('click', event => {
       cart.plusGood(id);
     }
   }
-  
+
 })
 
 const openModal = () => {
@@ -169,7 +194,7 @@ modalCart.addEventListener('click', (event) => {
 
 // slow scroll
 
-(function () {
+{
   const scrollLinks = document.querySelectorAll('a.scroll-link');
 
   for (const scrollLink of scrollLinks) {
@@ -182,7 +207,7 @@ modalCart.addEventListener('click', (event) => {
       });
     });
   }
-})
+}
 
 
 
@@ -190,13 +215,13 @@ modalCart.addEventListener('click', (event) => {
 const createCard = function ({ label, name, img, description, price, id }) {
   const card = document.createElement('div');
   card.className = 'col-lg-3 col-sm-6';
-  
+
 
   card.innerHTML = `
     <div class="goods-card">
     ${label ?
-        `<span class="label">${label}</span>` :
-        ''}
+      `<span class="label">${label}</span>` :
+      ''}
       <img src="db/${img}" alt="${name}" class="goods-image">
       <h3 class="goods-title">${name}</h3>
       <p class="goods-description">${description}</p>
@@ -222,7 +247,7 @@ const showAll = event => {
   getGoods().then(renderCards);
 }
 
-viewAll.forEach(function(elem) {
+viewAll.forEach(function (elem) {
   elem.addEventListener('click', showAll);
 });
 
